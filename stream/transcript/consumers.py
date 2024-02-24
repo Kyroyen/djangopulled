@@ -1,42 +1,35 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from dotenv import load_dotenv
-from deepgram import Deepgram
+import asyncio
 from typing import Dict
-
+import whisper
+from openai import OpenAI
 import os
 
 load_dotenv()
 
-class TranscriptConsumer(AsyncWebsocketConsumer):
-   dg_client = Deepgram(os.getenv('DEEPGRAM_API_KEY'))
+class WhisperConsumer(AsyncWebsocketConsumer):
+    client = OpenAI(
+        api_key=os.getenv("OPENAI_API_KEY")
+    )
 
-   async def get_transcript(self, data: Dict) -> None:
-       if 'channel' in data:
-           transcript = data['channel']['alternatives'][0]['transcript']
-      
-           if transcript:
-               await self.send(transcript)
+    async def connect(self):
+        await self.accept()
 
+    async def get_transcript(self, data):
+        if "channel" in data:
+            transcript = self.client.audio.transcriptions.create(
+                model= "whisper-1",
+                file = data
+            )
+            if transcript:
+                await self.send(transcript)
 
-   async def connect_to_deepgram(self):
-       try:
-           self.socket = await self.dg_client.transcription.live({'punctuate': True, 'interim_results': False})
-           self.socket.registerHandler(self.socket.event.CLOSE, lambda c: print(f'Connection closed with code {c}.'))
-           self.socket.registerHandler(self.socket.event.TRANSCRIPT_RECEIVED, self.get_transcript)
+    async def receive(self, bytes_data):
+        await self.get_transcript(bytes_data)
 
-       except Exception as e:
-           raise Exception(f'Could not open socket: {e}')
-
-   async def connect(self):
-       await self.connect_to_deepgram()
-       await self.accept()
-          
-
-   async def disconnect(self, close_code):
+    async def disconnect(self, close_code):
        await self.channel_layer.group_discard(
            self.room_group_name,
            self.channel_name
        )
-
-   async def receive(self, bytes_data):
-       self.socket.send(bytes_data)
