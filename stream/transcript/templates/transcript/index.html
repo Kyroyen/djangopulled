@@ -3,12 +3,13 @@
 <head>
     <title>Chat</title>
 </head>
-<body>
-    <h1>Transcribe Audio With Django</h1>
-    <p id="status">Connection status will go here</p>
-    <p id="transcript"></p>
-    <button id="startButton">Start Recording</button>
-    <button id="stopButton" disabled>Stop Recording</button>
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+
+    <h1 style="color: #333;">Transcribe Audio With Django</h1>
+    <p id="status" style="color: #666;">Connection status will go here</p>
+    <p id="transcript" style="font-style: italic; color: #777;"></p>
+    <button id="startButton" onclick="startRecording()" style="background-color: #4CAF50; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px; margin-right: 10px;">Start Recording</button>
+    <button id="stopButton" onclick="stopRecording()" style="background-color: #f44336; color: white; padding: 10px 20px; border: none; cursor: pointer; border-radius: 4px;">Stop Recording</button>
    
     <script>
         let stream;
@@ -19,10 +20,9 @@
         const startButton = document.getElementById('startButton');
         const stopButton = document.getElementById('stopButton');
 
-        startButton.addEventListener('click', startRecording);
-        stopButton.addEventListener('click', stopRecording);
-
         function startRecording() {
+            startButton.style.backgroundColor = "#3CB371"; // Change color to highlight
+            stopButton.style.backgroundColor = "#f44336"; // Reset color for stop button
             navigator.mediaDevices.getUserMedia({ audio: true }).then((userStream) => {
                 stream = userStream;
 
@@ -72,6 +72,8 @@
         }
 
         function stopRecording() {
+            stopButton.style.backgroundColor = "#FF6347"; // Change color to highlight
+            startButton.style.backgroundColor = "#4CAF50"; // Reset color for start button
             if (mediaRecorder && mediaRecorder.state !== 'inactive') {
                 mediaRecorder.stop();
                 stream.getTracks().forEach(track => track.stop());
