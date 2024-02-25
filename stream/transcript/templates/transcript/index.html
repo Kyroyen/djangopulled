@@ -1,53 +1,87 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Chat</title>
-    </head>
-    <body>
-        <h1>Transcribe Audio With Django</h1>
-        <p id="status">Connection status will go here</p>
-        <p id="transcript"></p>
-       
-        <script>
-           navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-            if (!MediaRecorder.isTypeSupported('audio/webm'))
-                return alert('Browser not supported')
+<head>
+    <title>Chat</title>
+</head>
+<body>
+    <h1>Transcribe Audio With Django</h1>
+    <p id="status">Connection status will go here</p>
+    <p id="transcript"></p>
+    <button id="startButton">Start Recording</button>
+    <button id="stopButton" disabled>Stop Recording</button>
+   
+    <script>
+        let stream;
+        let mediaRecorder;
+        let socket;
+        let timer;
 
-            const mediaRecorder = new MediaRecorder(stream, {
-                mimeType: 'audio/webm',
-            })
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
 
-            const socket = new WebSocket('ws://localhost:8000/listen')
+        startButton.addEventListener('click', startRecording);
+        stopButton.addEventListener('click', stopRecording);
 
-            socket.onopen = () => {
-                document.querySelector('#status').textContent = 'Connected'
-                console.log({ event: 'onopen' })
-                mediaRecorder.addEventListener('dataavailable', async (event) => {
-                    if (event.data.size > 0 && socket.readyState == 1) {
-                        socket.send(event.data)
-                    }
-            })
-            mediaRecorder.start(250)
-            }
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true }).then((userStream) => {
+                stream = userStream;
 
-            socket.onmessage = (message) => {
-                const received = message.data
-                if (received) {
-                    console.log(received)
-                    document.querySelector('#transcript').textContent += ' ' + received
+                if (!MediaRecorder.isTypeSupported('audio/webm')) {
+                    return alert('Browser not supported');
                 }
-           }
 
-           socket.onclose = () => {
-            console.log({ event: 'onclose' })
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: 'audio/webm',
+                });
+
+                socket = new WebSocket('ws://localhost:8000/listen');
+
+                socket.onopen = () => {
+                    document.querySelector('#status').textContent = 'Connected';
+                    console.log({ event: 'onopen' });
+                    mediaRecorder.addEventListener('dataavailable', async (event) => {
+                        if (event.data.size > 0 && socket.readyState == 1) {
+                            console.log(event.data);
+                            socket.send(event.data);
+                        }
+                    });
+
+                    mediaRecorder.start(2000);
+                    timer = setTimeout(stopRecording, 90000); // Stop recording after 90 seconds
+                };
+
+                socket.onmessage = (message) => {
+                    const received = message.data;
+                    if (received) {
+                        console.log(received);
+                        document.querySelector('#transcript').textContent += ' ' + received;
+                    }
+                };
+
+                socket.onclose = () => {
+                    console.log({ event: 'onclose' });
+                };
+
+                socket.onerror = (error) => {
+                    console.log({ event: 'onerror', error });
+                };
+
+                startButton.disabled = true;
+                stopButton.disabled = false;
+            });
         }
 
-            socket.onerror = (error) => {
-                console.log({ event: 'onerror', error })
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                stream.getTracks().forEach(track => track.stop());
+                socket.close();
+                clearTimeout(timer);
+
+                startButton.disabled = false;
+                stopButton.disabled = true;
             }
-
-           })
-
-        </script>
-    </body>
+        }
+    </script>
+</body>
 </html>
