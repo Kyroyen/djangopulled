@@ -1,12 +1,11 @@
 from channels.generic.websocket import AsyncWebsocketConsumer
 from dotenv import load_dotenv
-from typing import Dict
 from openai import OpenAI
 import os
 # from whisperproject import make_trans
 
 load_dotenv()
-
+# print(os.getenv("OPENAI_API_KEY"))
 class WhisperConsumer(AsyncWebsocketConsumer):
     client = OpenAI(
         api_key= os.getenv("OPENAI_API_KEY")
@@ -21,7 +20,6 @@ class WhisperConsumer(AsyncWebsocketConsumer):
             # print("lawdasur",af)
         try:
             with open("audiofile.wav","rb") as af:
-                # print("bobsaur",af.read())
                 # af.seek(0)
                 trans = self.client.audio.transcriptions.create(
                     model="whisper-1",
@@ -32,8 +30,7 @@ class WhisperConsumer(AsyncWebsocketConsumer):
             if trans:
                 # print("asfhei")
                 await self.send(trans.text)
-        except Exception:
-            # print("chud gaya")
+        except Exception as e:
             await self.send("")
         
 
