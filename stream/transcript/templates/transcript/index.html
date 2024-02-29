@@ -34,7 +34,7 @@
                     mimeType: 'audio/webm',
                 });
 
-                socket = new WebSocket('wss://localhost:8000/listen');
+                socket = new WebSocket('wss://livetranscriptionwhisperapi.onrender.com/listen');
 
                 socket.onopen = () => {
                     document.querySelector('#status').textContent = 'Connected';
